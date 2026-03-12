@@ -1,12 +1,3 @@
-
-To fix this for mobile, we need to add a functional Enter button and a Back button to the screen, and arrange the keys into the standard 3-row QWERTY layout.
-I have updated the code below. Specifically:
-Mobile Submission: Added an "ENTER" and "DELETE" key to the on-screen keyboard.
-Standard Layout: The keyboard is now organized into three rows, matching the standard Wordle/Mobile layout.
-Touch-Friendly: Increased the size of the buttons and prevented the screen from zooming/selecting text when you tap rapidly.
-The Updated Code
-code
-Html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,84 +16,90 @@ Html
         }
         * { box-sizing: border-box; touch-action: manipulation; }
         body { 
-            background: var(--bg); 
-            color: var(--text); 
+            background: var(--bg); color: var(--text); 
             font-family: 'Helvetica Neue', Arial, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            margin: 0; 
-            padding: 10px;
-            height: 100vh;
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 0; padding: 10px; height: 100vh; overflow: hidden;
         }
         
+        /* Maker UI */
         #maker-ui { width: 100%; max-width: 400px; text-align: center; padding-top: 20px; }
         input { display: block; width: 100%; padding: 12px; margin: 10px 0; background: #272729; border: 1px solid var(--border); color: white; border-radius: 4px; text-transform: uppercase; font-size: 16px; }
         
-        /* Game Layout */
+        /* Game UI */
         #game-ui { width: 100%; max-width: 500px; display: flex; flex-direction: column; height: 100%; }
-        .round-info { margin: 10px 0; font-weight: bold; text-align: center; letter-spacing: 1px; }
+        .round-info { margin: 10px 0; font-weight: bold; text-align: center; letter-spacing: 1px; color: #818384; }
         
-        /* Grid Styles */
-        #board { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; margin-bottom: 10px; }
+        /* Board */
+        #board { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; }
         .row { display: flex; gap: 5px; }
         .tile { 
-            width: 55px; height: 55px; 
-            border: 2px solid var(--border); 
+            width: 50px; height: 50px; border: 2px solid var(--border); 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.8rem; font-weight: bold; text-transform: uppercase; 
-            user-select: none;
+            font-size: 1.6rem; font-weight: bold; text-transform: uppercase; user-select: none;
         }
-        @media (max-height: 700px) { .tile { width: 45px; height: 45px; font-size: 1.4rem; } }
-
         .tile.correct { background: var(--correct); border-color: var(--correct); }
         .tile.present { background: var(--present); border-color: var(--present); }
         .tile.absent { background: var(--absent); border-color: var(--absent); }
 
-        /* Keyboard Styles */
-        #keyboard { width: 100%; padding: 0 5px 20px; }
-        .kb-row { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; touch-action: manipulation; }
+        /* Keyboard */
+        #keyboard { width: 100%; padding: 10px 0 20px; }
+        .kb-row { display: flex; justify-content: center; gap: 4px; margin-bottom: 8px; }
         .key { 
-            background: var(--key-bg); 
-            color: white; 
-            border: 0; 
-            border-radius: 4px; 
-            height: 58px; 
-            flex: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            font-size: 1.2rem; 
-            cursor: pointer; 
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background: var(--key-bg); color: white; border: 0; border-radius: 4px; 
+            height: 55px; flex: 1; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 1rem; cursor: pointer; user-select: none;
         }
-        .key.large { flex: 1.5; font-size: 0.8rem; }
+        .key.correct { background: var(--correct); }
+        .key.present { background: var(--present); }
+        .key.absent { background: var(--absent); opacity: 0.5; }
+        .key.large { flex: 1.5; font-size: 0.7rem; }
+
+        /* Intermission Modal */
+        #modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); display: flex; align-items: center; 
+            justify-content: center; z-index: 100; text-align: center;
+        }
+        .modal-content { background: #272729; padding: 30px; border-radius: 8px; width: 80%; max-width: 300px; }
+        .clue-list { margin: 20px 0; font-size: 1.2rem; color: var(--correct); font-weight: bold; line-height: 2; }
+        
         .hidden { display: none !important; }
-        button#create-btn { background: var(--correct); color: white; border: none; padding: 15px; width: 100%; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button.primary-btn { background: var(--correct); color: white; border: none; padding: 15px; width: 100%; font-weight: bold; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
 
+    <!-- MAKER MODE -->
     <div id="maker-ui">
         <h1>Savvy Maker</h1>
         <input type="text" id="w1" placeholder="Word 1" maxlength="8">
         <input type="text" id="w2" placeholder="Word 2" maxlength="8">
         <input type="text" id="w3" placeholder="Word 3" maxlength="8">
         <input type="text" id="w4" placeholder="Word 4" maxlength="8">
-        <input type="text" id="w5" placeholder="Subtext (Final Word)" maxlength="8">
-        <button id="create-btn" onclick="generateLink()">Create Puzzle Link</button>
+        <input type="text" id="w5" placeholder="Subtext (The Connection)" maxlength="8">
+        <button class="primary-btn" onclick="generateLink()">Create Puzzle Link</button>
         <div id="link-display" class="hidden" style="margin-top:20px;">
-            <p>Copy & send this link:</p>
-            <textarea id="share-url" readonly style="width:100%; background:#272729; color:var(--correct); border:1px solid var(--border); padding:10px;"></textarea>
+            <p>Share this Link:</p>
+            <textarea id="share-url" readonly style="width:100%; height: 60px; background:#272729; color:var(--correct); border:1px solid var(--border); padding:10px; font-size: 12px;"></textarea>
         </div>
     </div>
 
+    <!-- GAME MODE -->
     <div id="game-ui" class="hidden">
         <div class="round-info" id="round-text">ROUND 1 / 5</div>
         <div id="board"></div>
         <div id="keyboard"></div>
+    </div>
+
+    <!-- INTERMISSION MODAL -->
+    <div id="modal-overlay" class="hidden">
+        <div class="modal-content">
+            <h2>Clues Found:</h2>
+            <div id="intermission-clues" class="clue-list"></div>
+            <p style="font-size: 0.9em; color: #818384;">Now, solve the Subtext.</p>
+            <button class="primary-btn" onclick="closeIntermission()">CONTINUE</button>
+        </div>
     </div>
 
 <script>
@@ -110,6 +107,7 @@ Html
     let currentRound = 0;
     let currentGuess = "";
     let guesses = [];
+    let keyStates = {}; // Track letter colors for the keyboard
     const MAX_GUESSES = 6;
 
     const ROWS = [
@@ -126,13 +124,13 @@ Html
                 document.getElementById('maker-ui').classList.add('hidden');
                 document.getElementById('game-ui').classList.remove('hidden');
                 startRound();
-            } catch (e) { alert("Invalid puzzle link."); }
+            } catch (e) { alert("Link error."); }
         }
     };
 
     function generateLink() {
         const inputs = [1,2,3,4,5].map(i => document.getElementById(`w${i}`).value.trim().toUpperCase());
-        if (inputs.some(w => w.length < 2)) return alert("Words must be at least 2 letters.");
+        if (inputs.some(w => w.length < 1)) return alert("Fill all 5 words.");
         const encoded = btoa(JSON.stringify(inputs));
         const url = window.location.origin + window.location.pathname + "#" + encoded;
         document.getElementById('share-url').value = url;
@@ -142,6 +140,7 @@ Html
     function startRound() {
         guesses = [];
         currentGuess = "";
+        keyStates = {}; // Clear keyboard memory for each new word
         document.getElementById('round-text').innerText = currentRound < 4 ? `ROUND ${currentRound + 1} / 5` : "THE SUBTEXT";
         renderBoard();
         renderKeyboard();
@@ -159,24 +158,53 @@ Html
         renderBoard();
     }
 
+    function updateKeyStates(guess) {
+        const target = words[currentRound];
+        guess.split('').forEach((letter, i) => {
+            if (target[i] === letter) {
+                keyStates[letter] = 'correct';
+            } else if (target.includes(letter)) {
+                if (keyStates[letter] !== 'correct') keyStates[letter] = 'present';
+            } else {
+                if (!keyStates[letter]) keyStates[letter] = 'absent';
+            }
+        });
+    }
+
     function submitGuess() {
         const target = words[currentRound];
+        updateKeyStates(currentGuess);
         guesses.push(currentGuess);
         
         if (currentGuess === target) {
             setTimeout(() => {
-                if (currentRound < 4) {
-                    alert("Correct!");
+                if (currentRound === 3) {
+                    showIntermission();
+                } else if (currentRound < 4) {
                     currentRound++;
                     startRound();
                 } else {
-                    alert("PUZZLE COMPLETE! You solved the Subtext.");
+                    alert("PUZZLE COMPLETE!");
                 }
-            }, 100);
+            }, 200);
         } else if (guesses.length === MAX_GUESSES) {
-            alert("Game Over. The word was: " + target);
+            alert("Game Over! Word was: " + target);
         }
         currentGuess = "";
+        renderBoard();
+        renderKeyboard();
+    }
+
+    function showIntermission() {
+        const list = document.getElementById('intermission-clues');
+        list.innerHTML = words.slice(0, 4).join("<br>");
+        document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    function closeIntermission() {
+        document.getElementById('modal-overlay').classList.add('hidden');
+        currentRound = 4;
+        startRound();
     }
 
     function renderBoard() {
@@ -215,6 +243,10 @@ Html
             rowArr.forEach(key => {
                 const btn = document.createElement('button');
                 btn.className = 'key' + (key.length > 1 ? ' large' : '');
+                
+                // Apply the colored state to the key
+                if (keyStates[key]) btn.classList.add(keyStates[key]);
+                
                 btn.innerText = key;
                 btn.onclick = (e) => { e.preventDefault(); handleInput(key); };
                 rowDiv.appendChild(btn);
@@ -224,6 +256,7 @@ Html
     }
 
     window.onkeydown = (e) => {
+        if (document.getElementById('game-ui').classList.contains('hidden')) return;
         const key = e.key.toUpperCase();
         handleInput(key === "BACKSPACE" ? "DEL" : key);
     };
