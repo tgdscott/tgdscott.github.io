@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Savvy Word Challenge</title>
+    <style>
+        :root {
+            --bg: #121213;
+            --correct: #6aaa64;
+            --present: #c9b458;
+            --absent: #3a3a3c;
+            --border: #3a3a3c;
+            --text: #ffffff;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Helvetica Neue', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        .hidden { display: none !important; }
+        
+        /* Maker Styles */
+        #maker-ui { max-width: 400px; text-align: center; }
+        input { display: block; width: 100%; padding: 10px; margin: 10px 0; background: #272729; border: 1px solid var(--border); color: white; border-radius: 4px; text-transform: uppercase; }
+        button { background: var(--correct); color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; width: 100%; margin-top: 10px; }
+        #link-display { margin-top: 20px; word-break: break-all; font-size: 0.8em; background: #272729; padding: 10px; border-radius: 4px; }
+
+        /* Game Styles */
+        #game-ui { text-align: center; }
+        .round-info { margin-bottom: 10px; color: #818384; font-weight: bold; }
+        .grid { display: grid; gap: 5px; margin-bottom: 20px; }
+        .row { display: flex; gap: 5px; justify-content: center; }
+        .tile { width: 50px; height: 50px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; text-transform: uppercase; }
+        .tile.correct { background: var(--correct); border-color: var(--correct); }
+        .tile.present { background: var(--present); border-color: var(--present); }
+        .tile.absent { background: var(--absent); border-color: var(--absent); }
+        #keyboard { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; max-width: 500px; }
+        .key { background: #818384; border-radius: 4px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; }
+        .key.wide { grid-column: span 1.5; }
+    </style>
+</head>
+<body>
+
+    <!-- MAKER MODE -->
+    <div id="maker-ui">
+        <h1>Create a Savvy Puzzle</h1>
+        <p>Enter 4 words, then the 5th "Subtext" word that connects them.</p>
+        <input type="text" id="w1" placeholder="Word 1" maxlength="8">
+        <input type="text" id="w2" placeholder="Word 2" maxlength="8">
+        <input type="text" id="w3" placeholder="Word 3" maxlength="8">
+        <input type="text" id="w4" placeholder="Word 4" maxlength="8">
+        <input type="text" id="w5" placeholder="Word 5 (The Subtext)" maxlength="8">
+        <button onclick="generateLink()">Create Puzzle Link</button>
+        <div id="link-display" class="hidden">
+            <p>Send this link to a friend:</p>
+            <a id="share-url" style="color: #6aaa64;"></a>
+        </div>
+    </div>
+
+    <!-- PLAYER MODE -->
+    <div id="game-ui" class="hidden">
+        <div class="round-info" id="round-text">ROUND 1 / 5</div>
+        <div id="board" class="grid"></div>
+        <div id="keyboard"></div>
+    </div>
+
+<script>
+    let words = [];
+    let currentRound = 0;
+    let currentGuess = "";
+    let guesses = [];
+    const MAX_GUESSES = 6;
+
+    // 1. Initialization
+    window.onload = () => {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            try {
+                words = JSON.parse(atob(hash));
+                document.getElementById('maker-ui').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                startRound();
+            } catch (e) { console.error("Invalid Puzzle Link"); }
+        }
+    };
+
+    // 2. Maker Functions
+    function generateLink() {
+        const inputs = [1,2,3,4,5].map(i => document.getElementById(`w${i}`).value.trim().toUpperCase());
+        if (inputs.some(w => w.length < 2)) return alert("All words must be at least 2 letters!");
+        const encoded = btoa(JSON.stringify(inputs));
+        const url = window.location.origin + window.location.pathname + "#" + encoded;
+        document.getElementById('share-url').innerText = url;
+        document.getElementById('share-url').href = url;
+        document.getElementById('link-display').classList.remove('hidden');
+    }
+
+    // 3. Game Logic
+    function startRound() {
+        guesses = [];
+        currentGuess = "";
+        const target = words[currentRound];
+        document.getElementById('round-text').innerText = currentRound < 4 ? `ROUND ${currentRound + 1} / 5` : "FINAL ROUND: THE SUBTEXT";
+        renderBoard();
+        renderKeyboard();
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = "";
+        const wordLength = words[currentRound].length;
+        
+        for (let i = 0; i < MAX_GUESSES; i++) {
+            const row = document.createElement('div');
+            row.className = 'row';
+            const guess = guesses[i] || (i === guesses.length ? currentGuess : "");
+            
+            for (let j = 0; j < wordLength; j++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                if (guesses[i]) {
+                    const status = getLetterStatus(guesses[i], j);
+                    tile.classList.add(status);
+                }
+                tile.innerText = guess[j] || "";
+                row.appendChild(tile);
+            }
+            board.appendChild(row);
+        }
+    }
+
+    function getLetterStatus(guess, index) {
+        const target = words[currentRound];
+        const letter = guess[index];
+        if (target[index] === letter) return "correct";
+        if (target.includes(letter)) return "present";
+        return "absent";
+    }
+
+    function submitGuess() {
+        const target = words[currentRound];
+        if (currentGuess.length !== target.length) return;
+        
+        guesses.push(currentGuess);
+        if (currentGuess === target) {
+            setTimeout(() => {
+                if (currentRound < 4) {
+                    alert(`Correct! The word was ${target}.`);
+                    currentRound++;
+                    startRound();
+                } else {
+                    alert("Congratulations! You solved the Savvy Subtext!");
+                }
+            }, 100);
+        } else if (guesses.length === MAX_GUESSES) {
+            alert(`Game Over! The word was ${target}`);
+        }
+        currentGuess = "";
+        renderBoard();
+    }
+
+    // 4. Input Handling
+    window.onkeydown = (e) => {
+        if (e.key === "Enter") submitGuess();
+        if (e.key === "Backspace") currentGuess = currentGuess.slice(0, -1);
+        if (/^[a-z]$/i.test(e.key) && currentGuess.length < words[currentRound].length) {
+            currentGuess += e.key.toUpperCase();
+        }
+        renderBoard();
+    };
+
+    function renderKeyboard() {
+        const keys = "QWERTYUIOPASDFGHJKLZXCVBNM".split("");
+        const kb = document.getElementById('keyboard');
+        kb.innerHTML = "";
+        keys.forEach(key => {
+            const btn = document.createElement('div');
+            btn.className = 'key';
+            btn.innerText = key;
+            btn.onclick = () => { window.onkeydown({key}); };
+            kb.appendChild(btn);
+        });
+    }
+</script>
+</body>
+</html>
